@@ -11,6 +11,7 @@ module Stack.GhcPkg
   ,findGhcPkgField
   ,createDatabase
   ,unregisterGhcPkgId
+  ,unregisterGhcPkgIds
   ,getCabalPkgVer
   ,ghcPkgExeName
   ,ghcPkgPathEnvVar
@@ -166,6 +167,21 @@ unregisterGhcPkgId wc cv pkgDb gid ident = do
             ACGhc v | v < mkVersion [7, 9] ->
                 [packageIdentifierString ident]
             _ -> ["--ipid", ghcPkgIdString gid])
+
+-- | unregister list of package ghcids, available from GHC 8.0.1
+unregisterGhcPkgIds :: (HasProcessContext env, HasLogFunc env)
+                    => WhichCompiler
+                    -> Path Abs Dir -- ^ package database
+                    -> [GhcPkgId]
+                    -> RIO env ()
+unregisterGhcPkgIds wc pkgDb gids = do
+    eres <- ghcPkg wc [pkgDb] args
+    case eres of
+        Left e -> logWarn $ displayShow e
+        Right _ -> return ()
+  where
+    args = "unregister" : "--user" : "--force" :
+        concatMap (\gid -> ["--ipid", ghcPkgIdString gid]) gids
 
 -- | Get the version of Cabal from the global package database.
 getCabalPkgVer :: (HasProcessContext env, HasLogFunc env)
